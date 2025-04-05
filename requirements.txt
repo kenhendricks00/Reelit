@@ -1,0 +1,7 @@
+praw
+gTTS
+moviepy
+Flask
+python-dotenv # For managing API keys
+Pillow # For subtitle image generation
+openai-whisper # For accurate timestamp generation
