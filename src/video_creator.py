@@ -23,11 +23,12 @@ def split_text(text, max_words_per_chunk=5):
 
 # Added function to draw title onto the template
 def draw_title_on_template(template_path, title_text, output_path,
-                           font_path='assets/Montserrat-Black.ttf', 
-                           max_font_size=75, min_font_size=40, 
+                           font_path='src/assets/Inter-Bold.ttf', 
+                           max_font_size=48, min_font_size=36, 
                            text_color=(0, 0, 0), 
-                           boundary_x=50, boundary_y=850, 
-                           boundary_width=980, boundary_max_height=400):
+                           boundary_x=150, boundary_y=910, 
+                           boundary_width=780, boundary_max_height=160,
+                           debug_boundary=True):
     """Loads template, draws title adaptively within a defined boundary.
     Adjust boundary_x/y/width/max_height as needed for your template.
     """
@@ -35,6 +36,18 @@ def draw_title_on_template(template_path, title_text, output_path,
     try:
         img = Image.open(template_path).convert("RGBA")
         draw = ImageDraw.Draw(img)
+        
+        # Draw the boundary box for debugging
+        if debug_boundary:
+            boundary_color = (255, 0, 0, 128)  # Semi-transparent red
+            draw.rectangle(
+                [(boundary_x, boundary_y), 
+                 (boundary_x + boundary_width, boundary_y + boundary_max_height)],
+                outline=boundary_color,
+                width=3
+            )
+            print(f"Drawing debug boundary box at: ({boundary_x}, {boundary_y}, {boundary_width}, {boundary_max_height})")
+
         # width, height = img.size # Get image dimensions if needed, but boundary is primary
 
         font = None
@@ -60,7 +73,7 @@ def draw_title_on_template(template_path, title_text, output_path,
                     continue
             
             # Wrap text based on BOUNDARY width
-            avg_char_width = current_font_size / 1.8 
+            avg_char_width = current_font_size / 1.7  # Slightly reduced for better wrapping
             # Use boundary_width for wrapping calculation
             max_chars = math.floor(boundary_width / avg_char_width) if avg_char_width > 0 else 10
             if max_chars <= 0: max_chars = 10
@@ -92,8 +105,9 @@ def draw_title_on_template(template_path, title_text, output_path,
         # --- Calculate Final Position within BOUNDARY --- 
         # Center horizontally within the boundary
         x = boundary_x + (boundary_width - text_width) / 2
-        # Set y directly to the boundary's top edge
-        y = boundary_y 
+        
+        # Center vertically within the boundary
+        y = boundary_y + (boundary_max_height - text_height) / 2
 
         # --- Draw Text --- 
         print(f"  Drawing text block at ({x:.0f}, {y:.0f}) with size {final_font_size}")
@@ -115,7 +129,7 @@ def draw_title_on_template(template_path, title_text, output_path,
 
 # Updated function to create subtitle images using Pillow (No wrapping)
 def create_subtitle_image(text, output_path, width, # width param might become less relevant now
-                          font_path='assets/Montserrat-Black.ttf', 
+                          font_path='src/assets/Montserrat-Black.ttf', 
                           font_size=90, text_color=(255, 255, 255),
                           padding=20, 
                           outline_color=(0, 0, 0), outline_width=2):
@@ -210,7 +224,7 @@ def create_video(audio_path, background_video_path, title_text, story_text,
     target_width = 1080
     target_height = 1920
     # Adjust default template path
-    title_template_path = "assets/title_template.png"
+    title_template_path = "src/assets/title_template.png"
     temp_titled_card_path = os.path.join(os.path.dirname(output_path), "temp_titled_card.png")
 
     # Initialize clips
@@ -280,7 +294,18 @@ def create_video(audio_path, background_video_path, title_text, story_text,
         print(f"  Estimated title end time from Whisper: {estimated_title_speak_duration:.2f}s")
 
         # 4. Create Dynamic Title Card Image
-        success, final_title_card_path = draw_title_on_template(title_template_path, title_text, temp_titled_card_path)
+        success, final_title_card_path = draw_title_on_template(
+            title_template_path, 
+            title_text, 
+            temp_titled_card_path,
+            max_font_size=48,
+            min_font_size=36,
+            boundary_x=150,
+            boundary_y=910,
+            boundary_width=780,
+            boundary_max_height=160,
+            debug_boundary=False  # Turn off debugging for production
+        )
         if not success: raise RuntimeError("Failed to create dynamic title card image.")
         title_card_clip = mp.ImageClip(final_title_card_path)
         title_card_clip = title_card_clip.set_duration(estimated_title_speak_duration) 
@@ -423,16 +448,16 @@ if __name__ == '__main__':
     example_story = "This test includes background music layered with narration."
     example_narration_raw = f"{example_title} {example_story}"
     example_narration_for_tts = re.sub(r'\bAITA\b\??', 'Am I the asshole?', example_narration_raw, flags=re.IGNORECASE)
-    narration_file = "output/test_narration_music.mp3" # Relative to src
-    background_file = "assets/background.mp4" # Relative to src
-    music_file = "assets/background_music.mp3" # Relative to src
-    output_video_file = "output/final_video_with_music.mp4" # Relative to src
-    template_file_check = "assets/title_template.png" # Relative to src
-    example_font_path = "assets/Montserrat-Black.ttf" # Relative to src
+    narration_file = "src/output/test_narration_music.mp3" # Relative to src
+    background_file = "src/assets/background.mp4" # Relative to src
+    music_file = "src/assets/background_music.mp3" # Relative to src
+    output_video_file = "src/output/final_video_with_music.mp4" # Relative to src
+    template_file_check = "src/assets/title_template.png" # Relative to src
+    example_font_path = "src/assets/Montserrat-Black.ttf" # Relative to src
 
     # Ensure dirs exist relative to src
-    if not os.path.exists("output"): os.makedirs("output")
-    if not os.path.exists("assets"): os.makedirs("assets")
+    if not os.path.exists("src/output"): os.makedirs("src/output")
+    if not os.path.exists("src/assets"): os.makedirs("src/assets")
     
     # Create narration for example if it doesn't exist
     if not os.path.exists(narration_file):
